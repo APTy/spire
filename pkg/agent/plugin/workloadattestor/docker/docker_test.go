@@ -7,9 +7,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	dockerclient "github.com/docker/docker/client"
 	gomock "github.com/golang/mock/gomock"
 	"github.com/spiffe/spire/proto/agent/workloadattestor"
 	spi "github.com/spiffe/spire/proto/common/plugin"
@@ -83,8 +80,8 @@ func TestDockerLabels(t *testing.T) {
 			cgroupFile, cleanup := newTestFile(t, "10:devices:/docker/6469646e742065787065637420616e796f6e6520746f20726561642074686973")
 			defer cleanup()
 			ctx := context.Background()
-			container := types.ContainerJSON{
-				Config: &container.Config{
+			container := &ContainerInfo{
+				Config: ContainerConfig{
 					Labels: tt.mockContainerLabels,
 					Image:  tt.mockImageID,
 				},
@@ -191,7 +188,7 @@ func TestDockerError(t *testing.T) {
 	defer cleanup()
 	ctx := context.Background()
 	mockFS.EXPECT().Open("/proc/123/cgroup").Return(os.Open(cgroupFile))
-	mockDocker.EXPECT().ContainerInspect(ctx, "bar").Return(types.ContainerJSON{}, errors.New("docker error"))
+	mockDocker.EXPECT().ContainerInspect(ctx, "bar").Return(nil, errors.New("docker error"))
 
 	res, err := p.Attest(ctx, &workloadattestor.AttestRequest{Pid: 123})
 	require.Error(t, err)
@@ -213,8 +210,8 @@ cgroup_container_index = 8
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.NotNil(t, p.docker)
-	require.Equal(t, "unix:///socket_path", p.docker.(*dockerclient.Client).DaemonHost())
-	require.Equal(t, "1.20", p.docker.(*dockerclient.Client).ClientVersion())
+	require.Equal(t, "unix:///socket_path", p.docker.(*dockerClient).socketPath)
+	require.Equal(t, "1.20", p.docker.(*dockerClient).version)
 	require.Equal(t, "prefix", p.cgroupPrefix)
 	require.Equal(t, 8, p.cgroupContainerIndex)
 }
@@ -226,8 +223,8 @@ func TestDockerConfigDefault(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.NotNil(t, p.docker)
-	require.Equal(t, dockerclient.DefaultDockerHost, p.docker.(*dockerclient.Client).DaemonHost())
-	require.Equal(t, "1.40", p.docker.(*dockerclient.Client).ClientVersion())
+	require.Equal(t, defaultDockerSocketPath, p.docker.(*dockerClient).socketPath)
+	require.Equal(t, "1.26", p.docker.(*dockerClient).version)
 	require.Equal(t, "/docker", p.cgroupPrefix)
 	require.Equal(t, 1, p.cgroupContainerIndex)
 }

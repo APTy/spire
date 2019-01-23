@@ -6,9 +6,9 @@ package docker
 
 import (
 	context "context"
-	types "github.com/docker/docker/api/types"
-	gomock "github.com/golang/mock/gomock"
 	reflect "reflect"
+
+	gomock "github.com/golang/mock/gomock"
 )
 
 // MockDockerClient is a mock of DockerClient interface
@@ -35,9 +35,9 @@ func (m *MockDockerClient) EXPECT() *MockDockerClientMockRecorder {
 }
 
 // ContainerInspect mocks base method
-func (m *MockDockerClient) ContainerInspect(arg0 context.Context, arg1 string) (types.ContainerJSON, error) {
+func (m *MockDockerClient) ContainerInspect(arg0 context.Context, arg1 string) (*ContainerInfo, error) {
 	ret := m.ctrl.Call(m, "ContainerInspect", arg0, arg1)
-	ret0, _ := ret[0].(types.ContainerJSON)
+	ret0, _ := ret[0].(*ContainerInfo)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

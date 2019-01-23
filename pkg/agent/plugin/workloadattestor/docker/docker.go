@@ -7,9 +7,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	dockerclient "github.com/docker/docker/client"
 	"github.com/hashicorp/hcl"
 	"github.com/spiffe/spire/pkg/agent/common/cgroups"
 	"github.com/spiffe/spire/proto/agent/workloadattestor"
@@ -28,7 +25,7 @@ var defaultContainerIndex = 1
 
 // DockerClient is a subset of the docker client functionality, useful for mocking.
 type DockerClient interface {
-	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	ContainerInspect(ctx context.Context, containerID string) (*ContainerInfo, error)
 }
 
 type dockerPlugin struct {
@@ -99,7 +96,7 @@ func (p *dockerPlugin) Attest(ctx context.Context, req *workloadattestor.AttestR
 	}, nil
 }
 
-func getSelectorsFromConfig(cfg *container.Config) []*common.Selector {
+func getSelectorsFromConfig(cfg ContainerConfig) []*common.Selector {
 	var selectors []*common.Selector
 	for label, value := range cfg.Labels {
 		selectors = append(selectors, &common.Selector{
@@ -126,14 +123,7 @@ func (p *dockerPlugin) Configure(ctx context.Context, req *spi.ConfigureRequest)
 		return nil, err
 	}
 
-	var opts []func(*dockerclient.Client) error
-	if config.DockerSocketPath != "" {
-		opts = append(opts, dockerclient.WithHost(config.DockerSocketPath))
-	}
-	if config.DockerVersion != "" {
-		opts = append(opts, dockerclient.WithVersion(config.DockerVersion))
-	}
-	p.docker, err = dockerclient.NewClientWithOpts(opts...)
+	p.docker = newDockerClient(config.DockerSocketPath, config.DockerVersion)
 	if err != nil {
 		return nil, err
 	}
