@@ -19,6 +19,7 @@ import (
 	"github.com/spiffe/spire/pkg/common/telemetry"
 	"github.com/spiffe/spire/pkg/server/ca"
 	"github.com/spiffe/spire/pkg/server/catalog"
+	"github.com/spiffe/spire/pkg/server/plugin/noderesolver/defaultnoderesolver"
 	"github.com/spiffe/spire/pkg/server/util/regentryutil"
 	"github.com/spiffe/spire/proto/api/node"
 	"github.com/spiffe/spire/proto/common"
@@ -557,12 +558,17 @@ func (h *Handler) updateNodeSelectors(ctx context.Context,
 	baseSpiffeID string, attestResponse *nodeattestor.AttestResponse, attestationType string) error {
 
 	// Select node resolver based on request attestation type
-	var nodeResolver noderesolver.NodeResolver
+	var nodeResolver, defaultNodeResolver noderesolver.NodeResolver
 	for _, r := range h.c.Catalog.NodeResolvers() {
 		if r.Config().PluginName == attestationType {
 			nodeResolver = r
-			break
+		} else if r.Config().PluginName == defaultnoderesolver.PluginName {
+			defaultNodeResolver = r
 		}
+	}
+	if nodeResolver == nil && defaultNodeResolver != nil {
+		nodeResolver = defaultNodeResolver
+		h.c.Log.Debugf("could not find node resolver type %q, loaded \"default\" node resolver", attestationType)
 	}
 
 	var selectors []*common.Selector

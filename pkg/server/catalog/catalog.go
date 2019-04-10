@@ -16,6 +16,7 @@ import (
 	"github.com/spiffe/spire/pkg/server/plugin/nodeattestor/x509pop"
 	aws_nr "github.com/spiffe/spire/pkg/server/plugin/noderesolver/aws"
 	azure_nr "github.com/spiffe/spire/pkg/server/plugin/noderesolver/azure"
+	"github.com/spiffe/spire/pkg/server/plugin/noderesolver/defaultnoderesolver"
 	"github.com/spiffe/spire/pkg/server/plugin/noderesolver/noop"
 	"github.com/spiffe/spire/proto/server/datastore"
 	"github.com/spiffe/spire/proto/server/keymanager"
@@ -71,6 +72,7 @@ var (
 		},
 		NodeResolverType: {
 			"noop":      noderesolver.NewBuiltIn(noop.New()),
+			"default":   noderesolver.NewBuiltIn(defaultnoderesolver.New()),
 			"aws_iid":   noderesolver.NewBuiltIn(aws_nr.NewIIDResolverPlugin()),
 			"azure_msi": noderesolver.NewBuiltIn(azure_nr.NewMSIResolverPlugin()),
 		},
