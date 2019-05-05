@@ -15,6 +15,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	common "github.com/spiffe/spire/pkg/common/catalog"
+	"github.com/spiffe/spire/pkg/common/policy"
 	"github.com/spiffe/spire/pkg/common/profiling"
 	"github.com/spiffe/spire/pkg/common/telemetry"
 	"github.com/spiffe/spire/pkg/common/util"
@@ -86,6 +87,8 @@ type Config struct {
 
 	// Telemetry provides the configuration for metrics exporting
 	Telemetry telemetry.FileConfig
+
+	PolicyEngineConfig *policy.EngineConfig
 }
 
 type Server struct {
@@ -170,8 +173,12 @@ func (s *Server) run(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+	policyEngine, err := policy.NewEngine(s.config.PolicyEngineConfig)
+	if err != nil {
+		return err
+	}
 
-	endpointsServer := s.newEndpointsServer(cat, svidRotator, serverCA, metrics)
+	endpointsServer := s.newEndpointsServer(cat, svidRotator, serverCA, metrics, policyEngine)
 
 	// Set the identity provider dependencies
 	if err := identityProvider.SetDeps(identityprovider.Deps{
@@ -306,16 +313,17 @@ func (s *Server) newSVIDRotator(ctx context.Context, serverCA ca.ServerCA, metri
 	return svidRotator, nil
 }
 
-func (s *Server) newEndpointsServer(catalog catalog.Catalog, svidRotator svid.Rotator, serverCA ca.ServerCA, metrics telemetry.Metrics) endpoints.Server {
+func (s *Server) newEndpointsServer(catalog catalog.Catalog, svidRotator svid.Rotator, serverCA ca.ServerCA, metrics telemetry.Metrics, policyEngine *policy.Engine) endpoints.Server {
 	return endpoints.New(&endpoints.Config{
-		TCPAddr:     s.config.BindAddress,
-		UDSAddr:     s.config.BindUDSAddress,
-		SVIDStream:  svidRotator.Subscribe(),
-		TrustDomain: s.config.TrustDomain,
-		Catalog:     catalog,
-		ServerCA:    serverCA,
-		Log:         s.config.Log.WithField("subsystem_name", "endpoints"),
-		Metrics:     metrics,
+		TCPAddr:      s.config.BindAddress,
+		UDSAddr:      s.config.BindUDSAddress,
+		SVIDStream:   svidRotator.Subscribe(),
+		TrustDomain:  s.config.TrustDomain,
+		Catalog:      catalog,
+		ServerCA:     serverCA,
+		PolicyEngine: policyEngine,
+		Log:          s.config.Log.WithField("subsystem_name", "endpoints"),
+		Metrics:      metrics,
 
 		AllowAgentlessNodeAttestors: s.config.Experimental.AllowAgentlessNodeAttestors,
 	})

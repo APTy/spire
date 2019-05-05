@@ -107,10 +107,11 @@ func (e *endpoints) registerNodeAPI(tcpServer *grpc.Server) {
 // it against the provided gRPC.
 func (e *endpoints) registerRegistrationAPI(tcpServer, udpServer *grpc.Server) {
 	r := &registration.Handler{
-		Log:         e.c.Log.WithField("subsystem_name", "registration_api"),
-		Metrics:     e.c.Metrics,
-		Catalog:     e.c.Catalog,
-		TrustDomain: e.c.TrustDomain,
+		Log:          e.c.Log.WithField("subsystem_name", "registration_api"),
+		Metrics:      e.c.Metrics,
+		Catalog:      e.c.Catalog,
+		TrustDomain:  e.c.TrustDomain,
+		PolicyEngine: e.c.PolicyEngine,
 	}
 
 	registration_pb.RegisterRegistrationServer(tcpServer, r)

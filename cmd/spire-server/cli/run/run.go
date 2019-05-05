@@ -17,6 +17,7 @@ import (
 	"github.com/spiffe/spire/pkg/common/cli"
 	"github.com/spiffe/spire/pkg/common/idutil"
 	"github.com/spiffe/spire/pkg/common/log"
+	"github.com/spiffe/spire/pkg/common/policy"
 	"github.com/spiffe/spire/pkg/common/telemetry"
 	"github.com/spiffe/spire/pkg/common/util"
 	"github.com/spiffe/spire/pkg/server"
@@ -36,18 +37,19 @@ type runConfig struct {
 }
 
 type serverRunConfig struct {
-	BindAddress         string             `hcl:"bind_address"`
-	BindPort            int                `hcl:"bind_port"`
-	CASubject           *caSubjectConfig   `hcl:"ca_subject"`
-	CATTL               string             `hcl:"ca_ttl"`
-	DataDir             string             `hcl:"data_dir"`
-	LogFile             string             `hcl:"log_file"`
-	LogLevel            string             `hcl:"log_level"`
-	RegistrationUDSPath string             `hcl:"registration_uds_path"`
-	SVIDTTL             string             `hcl:"svid_ttl"`
-	TrustDomain         string             `hcl:"trust_domain"`
-	UpstreamBundle      bool               `hcl:"upstream_bundle"`
-	Experimental        experimentalConfig `hcl:"experimental"`
+	BindAddress         string               `hcl:"bind_address"`
+	BindPort            int                  `hcl:"bind_port"`
+	CASubject           *caSubjectConfig     `hcl:"ca_subject"`
+	CATTL               string               `hcl:"ca_ttl"`
+	DataDir             string               `hcl:"data_dir"`
+	LogFile             string               `hcl:"log_file"`
+	LogLevel            string               `hcl:"log_level"`
+	RegistrationUDSPath string               `hcl:"registration_uds_path"`
+	SVIDTTL             string               `hcl:"svid_ttl"`
+	TrustDomain         string               `hcl:"trust_domain"`
+	UpstreamBundle      bool                 `hcl:"upstream_bundle"`
+	Experimental        experimentalConfig   `hcl:"experimental"`
+	PolicyEngine        *policy.EngineConfig `hcl:"policy_engine"`
 
 	ConfigPath string
 
@@ -288,6 +290,8 @@ func mergeConfig(orig *serverConfig, cmd *runConfig) error {
 			CommonName:   subject.CommonName,
 		}
 	}
+
+	orig.PolicyEngineConfig = cmd.Server.PolicyEngine
 
 	return nil
 }

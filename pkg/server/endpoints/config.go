@@ -7,6 +7,7 @@ import (
 
 	observer "github.com/imkira/go-observer"
 	"github.com/sirupsen/logrus"
+	"github.com/spiffe/spire/pkg/common/policy"
 	"github.com/spiffe/spire/pkg/common/telemetry"
 	"github.com/spiffe/spire/pkg/server/ca"
 	"github.com/spiffe/spire/pkg/server/catalog"
@@ -36,6 +37,9 @@ type Config struct {
 
 	// Allow agentless spiffeIds when doing node attestation
 	AllowAgentlessNodeAttestors bool
+
+	// Makes policy decisions
+	PolicyEngine *policy.Engine
 
 	Log     logrus.FieldLogger
 	Metrics telemetry.Metrics
