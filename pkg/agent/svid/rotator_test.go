@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/golang/mock/gomock"
-	"github.com/imkira/go-observer"
+	observer "github.com/imkira/go-observer"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/spiffe/spire/pkg/agent/client"
 	"github.com/spiffe/spire/pkg/agent/manager/cache"
@@ -206,5 +206,6 @@ func (s *RotatorTestSuite) expectSVIDRotation(cert *x509.Certificate) {
 				},
 			},
 		}, nil)
+	s.client.EXPECT().Wait(gomock.Any())
 	s.client.EXPECT().Release().MaxTimes(2)
 }

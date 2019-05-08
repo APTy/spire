@@ -35,6 +35,8 @@ type JWTSVID struct {
 }
 
 type Client interface {
+	WaitGroup
+
 	FetchUpdates(ctx context.Context, req *node.FetchX509SVIDRequest) (*Update, error)
 	FetchJWTSVID(ctx context.Context, jsr *node.JSR) (*JWTSVID, error)
 
@@ -53,6 +55,8 @@ type Config struct {
 }
 
 type client struct {
+	waitGroup
+
 	c    *Config
 	conn *grpc.ClientConn
 	m    sync.Mutex

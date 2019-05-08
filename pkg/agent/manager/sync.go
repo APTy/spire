@@ -22,6 +22,11 @@ func (m *manager) synchronize(ctx context.Context) (err error) {
 	var regEntries map[string]*common.RegistrationEntry
 	var cEntryRequests = entryRequests{}
 
+	if err := m.client.Inc(); err != nil {
+		return err
+	}
+	defer m.client.Done()
+
 	regEntries, _, err = m.fetchUpdates(ctx, nil)
 	if err != nil {
 		return err

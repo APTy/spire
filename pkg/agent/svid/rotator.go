@@ -124,6 +124,9 @@ func (r *rotator) rotateSVID(ctx context.Context) (err error) {
 	// We must release the client because its underlaying connection is tied to an
 	// expired SVID, so next time the client is used, it will get a new connection with
 	// the most up-to-date SVID.
+	if err := r.client.Wait(ctx); err != nil {
+		r.c.Log.WithError(err).Warn("Failed to drain all requests before client release.")
+	}
 	r.client.Release()
 
 	s := State{

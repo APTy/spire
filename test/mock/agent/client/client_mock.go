@@ -35,6 +35,18 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
+// Done mocks base method
+func (m *MockClient) Done() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Done")
+}
+
+// Done indicates an expected call of Done
+func (mr *MockClientMockRecorder) Done() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Done", reflect.TypeOf((*MockClient)(nil).Done))
+}
+
 // FetchJWTSVID mocks base method
 func (m *MockClient) FetchJWTSVID(arg0 context.Context, arg1 *node.JSR) (*client.JWTSVID, error) {
 	m.ctrl.T.Helper()
@@ -65,6 +77,20 @@ func (mr *MockClientMockRecorder) FetchUpdates(arg0, arg1 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FetchUpdates", reflect.TypeOf((*MockClient)(nil).FetchUpdates), arg0, arg1)
 }
 
+// Inc mocks base method
+func (m *MockClient) Inc() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Inc")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Inc indicates an expected call of Inc
+func (mr *MockClientMockRecorder) Inc() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Inc", reflect.TypeOf((*MockClient)(nil).Inc))
+}
+
 // Release mocks base method
 func (m *MockClient) Release() {
 	m.ctrl.T.Helper()
@@ -75,4 +101,18 @@ func (m *MockClient) Release() {
 func (mr *MockClientMockRecorder) Release() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Release", reflect.TypeOf((*MockClient)(nil).Release))
+}
+
+// Wait mocks base method
+func (m *MockClient) Wait(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Wait", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Wait indicates an expected call of Wait
+func (mr *MockClientMockRecorder) Wait(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockClient)(nil).Wait), arg0)
 }
