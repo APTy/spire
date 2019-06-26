@@ -12,7 +12,7 @@ import (
 
 	"github.com/gofrs/uuid"
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/hcl"
 	"github.com/jinzhu/gorm"
 
@@ -996,6 +996,7 @@ func fetchRegistrationEntry(tx *gorm.DB,
 
 func listRegistrationEntries(tx *gorm.DB,
 	req *datastore.ListRegistrationEntriesRequest) (*datastore.ListRegistrationEntriesResponse, error) {
+
 	var p *datastore.Pagination
 	var err error
 
@@ -1426,6 +1427,10 @@ func modelToEntry(tx *gorm.DB, model RegisteredEntry) (*common.RegistrationEntry
 	for _, bundle := range fetchedBundles {
 		federatesWith = append(federatesWith, bundle.TrustDomain)
 	}
+	ttype := common.RegistrationEntryType_NODE
+	if model.Type == RegisteredEntryTypeWorkload {
+		ttype = common.RegistrationEntryType_WORKLOAD
+	}
 
 	return &common.RegistrationEntry{
 		EntryId:       model.EntryID,
@@ -1438,6 +1443,7 @@ func modelToEntry(tx *gorm.DB, model RegisteredEntry) (*common.RegistrationEntry
 		Downstream:    model.Downstream,
 		EntryExpiry:   model.Expiry,
 		DnsNames:      dnsList,
+		Type:          ttype,
 	}, nil
 }
 

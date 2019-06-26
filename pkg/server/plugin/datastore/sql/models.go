@@ -4,6 +4,13 @@ import (
 	"time"
 )
 
+type RegisteredEntryType int
+
+const (
+	RegisteredEntryTypeNode RegisteredEntryType = iota
+	RegisteredEntryTypeWorkload
+)
+
 // Model is used as a base for other models. Similar to gorm.Model without `DeletedAt`.
 // We don't want soft-delete support.
 type Model struct {
@@ -64,6 +71,7 @@ type RegisteredEntry struct {
 	FederatesWith []Bundle `gorm:"many2many:federated_registration_entries;"`
 	Admin         bool
 	Downstream    bool
+	Type          RegisteredEntryType
 	// (optional) expiry of this entry
 	Expiry int64
 	// (optional) DNS entries

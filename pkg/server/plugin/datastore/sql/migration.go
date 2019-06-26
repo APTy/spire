@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hashicorp/go-hclog"
+	hclog "github.com/hashicorp/go-hclog"
 	"github.com/jinzhu/gorm"
 	"github.com/spiffe/spire/pkg/common/bundleutil"
 	"github.com/spiffe/spire/pkg/common/idutil"
@@ -14,7 +14,7 @@ import (
 
 const (
 	// version of the database in the code
-	codeVersion = 8
+	codeVersion = 9
 )
 
 func migrateDB(db *gorm.DB, dbType string, log hclog.Logger) (err error) {
@@ -136,6 +136,8 @@ func migrateVersion(tx *gorm.DB, version int, log hclog.Logger) (versionOut int,
 		err = migrateToV7(tx)
 	case 7:
 		err = migrateToV8(tx)
+	case 8:
+		err = migrateToV9(tx)
 	default:
 		err = sqlError.New("no migration support for version %d", version)
 	}
@@ -324,6 +326,13 @@ func migrateToV8(tx *gorm.DB) error {
 	return nil
 }
 
+func migrateToV9(tx *gorm.DB) error {
+	if err := tx.AutoMigrate(&RegisteredEntry{}, &DNSName{}).Error; err != nil {
+		return sqlError.Wrap(err)
+	}
+	return nil
+}
+
 // V3Bundle holds a version 3 trust bundle
 type V3Bundle struct {
 	Model
@@ -427,5 +436,29 @@ type V7RegisteredEntry struct {
 
 // TableName gets table name for v7 registered entry
 func (V7RegisteredEntry) TableName() string {
+	return "registered_entries"
+}
+
+// V8RegisteredEntry holds a registered entity entry
+type V8RegisteredEntry struct {
+	Model
+
+	EntryID  string `gorm:"unique_index"`
+	SpiffeID string
+	ParentID string
+	// TTL of identities derived from this entry
+	TTL           int32
+	Selectors     []Selector
+	FederatesWith []Bundle `gorm:"many2many:federated_registration_entries;"`
+	Admin         bool
+	Downstream    bool
+	// (optional) expiry of this entry
+	Expiry int64
+	// (optional) DNS entries
+	DNSList []DNSName
+}
+
+// TableName gets table name for v7 registered entry
+func (V8RegisteredEntry) TableName() string {
 	return "registered_entries"
 }

@@ -72,6 +72,13 @@ message RegistrationEntry {
     int64 entryExpiry = 9;
     /** DNS entries */
     repeated string dns_names = 10;
+    /** Registration Entry type */
+    RegistrationEntryType type = 11;
+}
+
+enum RegistrationEntryType {
+    NODE = 0;
+    WORKLOAD = 1;
 }
 
 /** A list of registration entries. */
