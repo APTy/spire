@@ -35,7 +35,7 @@ type ContainerIDFinder interface {
 	FindContainerID(cgroup string) (containerID string, found bool)
 }
 
-// NewContainerIDFetcher returns a new ContainerIDFinder.
+// NewContainerIDFinder returns a new ContainerIDFinder.
 //
 // The pattern provided should use the Tokens defined in this package in order
 // to describe how a container id should be extracted from a cgroup entry.
@@ -46,7 +46,7 @@ type ContainerIDFinder interface {
 //
 // Note: The pattern provided is *not* a regular expression. It is a simplified matching
 // language that enforces a forward slash-delimited schema.
-func NewContainerIDFetcher(pattern string) (ContainerIDFinder, error) {
+func NewContainerIDFinder(pattern string) (ContainerIDFinder, error) {
 	if strings.Count(pattern, string(ContainerIDToken)) != 1 {
 		return nil, fmt.Errorf("pattern %q must contain the container id token %q exactly once", pattern, ContainerIDToken)
 	}
@@ -57,19 +57,48 @@ func NewContainerIDFetcher(pattern string) (ContainerIDFinder, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container id fetcher: %v", err)
 	}
-	return &containerIDFetcher{
+	return &containerIDFinder{
 		re: re,
 	}, nil
 }
 
-type containerIDFetcher struct {
+// NewContainerIDFinders returns a composite container finder.
+func NewContainerIDFinders(patterns []string) (ContainerIDFinder, error) {
+	var finders []ContainerIDFinder
+	for _, pattern := range patterns {
+		finder, err := NewContainerIDFinder(pattern)
+		if err != nil {
+			return nil, err
+		}
+		finders = append(finders, finder)
+	}
+	return &containerIDFinders{
+		finders: finders,
+	}, nil
+}
+
+type containerIDFinder struct {
 	re *regexp.Regexp
 }
 
-func (f *containerIDFetcher) FindContainerID(cgroup string) (string, bool) {
+func (f *containerIDFinder) FindContainerID(cgroup string) (string, bool) {
 	matches := f.re.FindSubmatch([]byte(cgroup))
 	if len(matches) == 0 {
 		return "", false
 	}
 	return string(matches[submatchIndex]), true
+}
+
+type containerIDFinders struct {
+	finders []ContainerIDFinder
+}
+
+func (f *containerIDFinders) FindContainerID(cgroup string) (string, bool) {
+	for _, finder := range f.finders {
+		id, ok := finder.FindContainerID(cgroup)
+		if ok {
+			return id, ok
+		}
+	}
+	return "", false
 }

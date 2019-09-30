@@ -23,8 +23,8 @@ func requireNotFind(t *testing.T, cf ContainerIDFinder, cgroups ...string) {
 	}
 }
 
-func TestContainerIDFetcher(t *testing.T) {
-	cf, err := NewContainerIDFetcher("/docker/<id>")
+func TestContainerIDFinder(t *testing.T) {
+	cf, err := NewContainerIDFinder("/docker/<id>")
 	require.NoError(t, err)
 
 	requireFind(t, cf, "/docker/", "")
@@ -40,8 +40,8 @@ func TestContainerIDFetcher(t *testing.T) {
 	)
 }
 
-func TestContainerIDFetcher2(t *testing.T) {
-	cf, err := NewContainerIDFetcher("/my.slice/*/<id>")
+func TestContainerIDFinder2(t *testing.T) {
+	cf, err := NewContainerIDFinder("/my.slice/*/<id>")
 	require.NoError(t, err)
 
 	requireFind(t, cf, "/my.slice/foo/", "")
@@ -56,8 +56,8 @@ func TestContainerIDFetcher2(t *testing.T) {
 	)
 }
 
-func TestContainerIDFetcher3(t *testing.T) {
-	cf, err := NewContainerIDFetcher("/long.slice/*/*/<id>/*")
+func TestContainerIDFinder3(t *testing.T) {
+	cf, err := NewContainerIDFinder("/long.slice/*/*/<id>/*")
 	require.NoError(t, err)
 
 	requireFind(t, cf, "/long.slice/foo/bar//qux", "")
@@ -77,7 +77,7 @@ func TestContainerIDFetcher3(t *testing.T) {
 	)
 }
 
-func TestNewContainerIDFetcherErrors(t *testing.T) {
+func TestNewContainerIDFinderErrors(t *testing.T) {
 	tests := []struct {
 		desc      string
 		pattern   string
@@ -102,7 +102,7 @@ func TestNewContainerIDFetcherErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			_, err := NewContainerIDFetcher(tt.pattern)
+			_, err := NewContainerIDFinder(tt.pattern)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), tt.expectErr)
 		})
