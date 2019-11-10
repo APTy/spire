@@ -12,9 +12,12 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/hashicorp/hcl"
 	"github.com/imdario/mergo"
+	"github.com/spiffe/spire/internal/dns"
+	"github.com/spiffe/spire/internal/grpcrand"
 	"github.com/spiffe/spire/pkg/agent"
 	"github.com/spiffe/spire/pkg/common/catalog"
 	"github.com/spiffe/spire/pkg/common/cli"
@@ -24,6 +27,7 @@ import (
 	"github.com/spiffe/spire/pkg/common/pemutil"
 	"github.com/spiffe/spire/pkg/common/telemetry"
 	"github.com/spiffe/spire/pkg/common/util"
+	"google.golang.org/grpc/resolver"
 )
 
 const (
@@ -34,6 +38,14 @@ const (
 	defaultDataDir  = "."
 	defaultLogLevel = "INFO"
 )
+
+func init() {
+	// custom resolver with 30-60 second polling interval
+	resolver.Register(dns.NewBuilder(
+		dns.WithScheme("dns+poll60s"),
+		dns.WithPollingInterval(time.Duration(30+grpcrand.Intn(30))*time.Second),
+	))
+}
 
 // config contains all available configurables, arranged by section
 type config struct {
@@ -217,7 +229,8 @@ func newAgentConfig(c *config) (*agent.Config, error) {
 	}
 
 	serverHostPort := net.JoinHostPort(c.Agent.ServerAddress, strconv.Itoa(c.Agent.ServerPort))
-	ac.ServerAddress = fmt.Sprintf("dns:///%s", serverHostPort)
+	// TODO: move entire grpc target to config?
+	ac.ServerAddress = fmt.Sprintf("dns+poll60s:///%s", serverHostPort)
 
 	td, err := idutil.ParseSpiffeID("spiffe://"+c.Agent.TrustDomain, idutil.AllowAnyTrustDomain())
 	if err != nil {
