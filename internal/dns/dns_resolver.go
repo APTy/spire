@@ -37,13 +37,15 @@ import (
 
 	"google.golang.org/grpc/backoff"
 	"google.golang.org/grpc/grpclog"
-	internalbackoff "google.golang.org/grpc/internal/backoff"
-	"google.golang.org/grpc/internal/grpcrand"
 	"google.golang.org/grpc/resolver"
+
+	// also vendored because they're grpc-go internals
+	internalbackoff "github.com/spiffe/spire/internal/backoff"
+	"github.com/spiffe/spire/internal/grpcrand"
 )
 
 func init() {
-	resolver.Register(NewBuilder())
+	// default resolver with 30 minute polling interval is already registered by actual grpc-go lib
 }
 
 const (
@@ -96,14 +98,39 @@ var customAuthorityResolver = func(authority string) (netResolver, error) {
 	}, nil
 }
 
+// BuilderOption configures a Builder.
+type BuilderOption func(*dnsBuilder)
+
+// WithPollingInterval sets the Builder's minimum dns polling interval.
+func WithPollingInterval(d time.Duration) BuilderOption {
+	return func(b *dnsBuilder) {
+		b.minFreq = d
+	}
+}
+
+// WithScheme sets the Builder's scheme name for registration purposes.
+func WithScheme(s string) BuilderOption {
+	return func(b *dnsBuilder) {
+		b.scheme = s
+	}
+}
+
 // NewBuilder creates a dnsBuilder which is used to factory DNS resolvers.
-func NewBuilder() resolver.Builder {
-	return &dnsBuilder{minFreq: defaultFreq}
+func NewBuilder(opts ...BuilderOption) resolver.Builder {
+	b := &dnsBuilder{
+		minFreq: defaultFreq,
+		scheme:  "dns",
+	}
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b
 }
 
 type dnsBuilder struct {
 	// minimum frequency of polling the DNS server.
 	minFreq time.Duration
+	scheme  string
 }
 
 // Build creates and starts a DNS resolver that watches the name resolution of the target.
@@ -161,7 +188,7 @@ func (b *dnsBuilder) Build(target resolver.Target, cc resolver.ClientConn, opts 
 
 // Scheme returns the naming scheme of this resolver builder, which is "dns".
 func (b *dnsBuilder) Scheme() string {
-	return "dns"
+	return b.scheme
 }
 
 type netResolver interface {
