@@ -81,7 +81,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.c.Log.WithField("subsystem_name", "health"),
 	)
 
-	as, err := a.attest(ctx, cat, metrics)
+	as, err := a.newAttestor(ctx, cat, metrics)
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (a *Agent) setupProfiling(ctx context.Context) (stop func()) {
 	}
 }
 
-func (a *Agent) attest(ctx context.Context, cat catalog.Catalog, metrics telemetry.Metrics) (*attestor.AttestationResult, error) {
+func (a *Agent) newAttestor(ctx context.Context, cat catalog.Catalog, metrics telemetry.Metrics) (attestor.Attestor, error) {
 	config := attestor.Config{
 		Catalog:           cat,
 		Metrics:           metrics,
@@ -176,14 +176,12 @@ func (a *Agent) attest(ctx context.Context, cat catalog.Catalog, metrics telemet
 		Log:               a.c.Log.WithField(telemetry.SubsystemName, telemetry.Attestor),
 		ServerAddress:     a.c.ServerAddress,
 	}
-	return attestor.New(&config).Attest(ctx)
+	return attestor.New(&config), nil
 }
 
-func (a *Agent) newManager(ctx context.Context, cat catalog.Catalog, metrics telemetry.Metrics, as *attestor.AttestationResult) (manager.Manager, error) {
+func (a *Agent) newManager(ctx context.Context, cat catalog.Catalog, metrics telemetry.Metrics, as attestor.Attestor) (manager.Manager, error) {
 	config := &manager.Config{
-		SVID:            as.SVID,
-		SVIDKey:         as.Key,
-		Bundle:          as.Bundle,
+		Attestor:        as,
 		Catalog:         cat,
 		TrustDomain:     a.c.TrustDomain,
 		ServerAddr:      a.c.ServerAddress,
@@ -193,7 +191,7 @@ func (a *Agent) newManager(ctx context.Context, cat catalog.Catalog, metrics tel
 		SVIDCachePath:   a.agentSVIDPath(),
 	}
 
-	mgr, err := manager.New(config)
+	mgr, err := manager.New(ctx, config)
 	if err != nil {
 		return nil, err
 	}

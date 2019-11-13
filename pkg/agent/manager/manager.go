@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -13,6 +12,7 @@ import (
 	observer "github.com/imkira/go-observer"
 	"github.com/spiffe/spire/pkg/agent/client"
 	"github.com/spiffe/spire/pkg/agent/manager/cache"
+	"github.com/spiffe/spire/pkg/agent/manager/managerstorage"
 	"github.com/spiffe/spire/pkg/agent/svid"
 	"github.com/spiffe/spire/pkg/common/bundleutil"
 	"github.com/spiffe/spire/pkg/common/telemetry"
@@ -20,11 +20,6 @@ import (
 	"github.com/spiffe/spire/proto/spire/agent/keymanager"
 	"github.com/spiffe/spire/proto/spire/api/node"
 	"github.com/spiffe/spire/proto/spire/common"
-)
-
-// Cache Manager errors
-var (
-	ErrNotCached = errors.New("not cached")
 )
 
 // Manager provides cache management functionalities for agents.
@@ -92,7 +87,7 @@ func (m *manager) Initialize(ctx context.Context) error {
 	m.storeSVID(m.svid.State().SVID)
 	m.storeBundle(m.cache.Bundle())
 
-	err := m.storePrivateKey(ctx, m.c.SVIDKey)
+	err := m.storePrivateKey(ctx, m.svid.State().Key)
 	if err != nil {
 		return fmt.Errorf("fail to store private key: %v", err)
 	}
@@ -226,7 +221,7 @@ func (m *manager) runBundleObserver(ctx context.Context) error {
 }
 
 func (m *manager) storeSVID(svidChain []*x509.Certificate) {
-	err := StoreSVID(m.svidCachePath, svidChain)
+	err := managerstorage.StoreSVID(m.svidCachePath, svidChain)
 	if err != nil {
 		m.c.Log.WithError(err).Warn("could not store SVID")
 	}
@@ -237,7 +232,7 @@ func (m *manager) storeBundle(bundle *bundleutil.Bundle) {
 	if bundle != nil {
 		rootCAs = bundle.RootCAs()
 	}
-	err := StoreBundle(m.bundleCachePath, rootCAs)
+	err := managerstorage.StoreBundle(m.bundleCachePath, rootCAs)
 	if err != nil {
 		m.c.Log.WithError(err).Error("could not store bundle")
 	}

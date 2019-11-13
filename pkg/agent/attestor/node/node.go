@@ -15,7 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spiffe/spire/pkg/agent/catalog"
 	"github.com/spiffe/spire/pkg/agent/client"
-	"github.com/spiffe/spire/pkg/agent/manager"
+	"github.com/spiffe/spire/pkg/agent/manager/managerstorage"
 	"github.com/spiffe/spire/pkg/common/bundleutil"
 	"github.com/spiffe/spire/pkg/common/idutil"
 	"github.com/spiffe/spire/pkg/common/telemetry"
@@ -143,8 +143,8 @@ func isSVIDExpired(svid []*x509.Certificate, timeNow func() time.Time) bool {
 }
 
 func (a *attestor) loadBundle() (*bundleutil.Bundle, error) {
-	bundle, err := manager.ReadBundle(a.c.BundleCachePath)
-	if err == manager.ErrNotCached {
+	bundle, err := managerstorage.ReadBundle(a.c.BundleCachePath)
+	if err == managerstorage.ErrNotCached {
 		if a.c.InsecureBootstrap {
 			if len(a.c.TrustBundle) > 0 {
 				a.c.Log.Warn("Trust bundle will be ignored; performing insecure bootstrap")
@@ -206,8 +206,8 @@ func (a *attestor) fetchAttestationData(
 func (a *attestor) readSVIDFromDisk() []*x509.Certificate {
 	log := a.c.Log.WithField(telemetry.Path, a.c.SVIDCachePath)
 
-	svid, err := manager.ReadSVID(a.c.SVIDCachePath)
-	if err == manager.ErrNotCached {
+	svid, err := managerstorage.ReadSVID(a.c.SVIDCachePath)
+	if err == managerstorage.ErrNotCached {
 		log.Debug("No pre-existing agent SVID found. Will perform node attestation")
 		return nil
 	} else if err != nil {

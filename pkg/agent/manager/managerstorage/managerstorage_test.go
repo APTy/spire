@@ -1,4 +1,4 @@
-package manager
+package managerstorage
 
 import (
 	"path"

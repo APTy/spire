@@ -1,13 +1,19 @@
-package manager
+package managerstorage
 
 import (
 	"bytes"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 
 	"github.com/spiffe/spire/pkg/common/diskutil"
+)
+
+// Cache Manager errors
+var (
+	ErrNotCached = errors.New("not cached")
 )
 
 // ReadBundle returns the bundle located at bundleCachePath. Returns nil

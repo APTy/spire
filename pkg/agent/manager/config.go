@@ -1,8 +1,7 @@
 package manager
 
 import (
-	"crypto/ecdsa"
-	"crypto/x509"
+	"context"
 	"fmt"
 	"net/url"
 	"sync"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/andres-erbsen/clock"
 	"github.com/sirupsen/logrus"
+	attestor "github.com/spiffe/spire/pkg/agent/attestor/node"
 	"github.com/spiffe/spire/pkg/agent/catalog"
 	"github.com/spiffe/spire/pkg/agent/manager/cache"
 	"github.com/spiffe/spire/pkg/agent/svid"
@@ -18,10 +18,7 @@ import (
 
 // Config holds a cache manager configuration
 type Config struct {
-	// Agent SVID and key resulting from successful attestation.
-	SVID             []*x509.Certificate
-	SVIDKey          *ecdsa.PrivateKey
-	Bundle           *cache.Bundle
+	Attestor         attestor.Attestor
 	Catalog          catalog.Catalog
 	TrustDomain      url.URL
 	Log              logrus.FieldLogger
@@ -37,8 +34,12 @@ type Config struct {
 }
 
 // New creates a cache manager based on c's configuration
-func New(c *Config) (*manager, error) {
-	spiffeID, err := getSpiffeIDFromSVID(c.SVID[0])
+func New(ctx context.Context, c *Config) (*manager, error) {
+	as, err := c.Attestor.Attest(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to attest: %v", err)
+	}
+	spiffeID, err := getSpiffeIDFromSVID(as.SVID[0])
 	if err != nil {
 		return nil, fmt.Errorf("cannot get spiffe id from SVID: %v", err)
 	}
@@ -55,14 +56,14 @@ func New(c *Config) (*manager, error) {
 		c.Clk = clock.New()
 	}
 
-	cache := cache.New(c.Log.WithField(telemetry.SubsystemName, telemetry.CacheManager), c.TrustDomain.String(), c.Bundle, c.Metrics)
+	cache := cache.New(c.Log.WithField(telemetry.SubsystemName, telemetry.CacheManager), c.TrustDomain.String(), as.Bundle, c.Metrics)
 
 	rotCfg := &svid.RotatorConfig{
 		Catalog:      c.Catalog,
 		Log:          c.Log,
 		Metrics:      c.Metrics,
-		SVID:         c.SVID,
-		SVIDKey:      c.SVIDKey,
+		SVID:         as.SVID,
+		SVIDKey:      as.Key,
 		SpiffeID:     spiffeID,
 		BundleStream: cache.SubscribeToBundleChanges(),
 		ServerAddr:   c.ServerAddr,
