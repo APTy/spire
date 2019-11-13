@@ -40,6 +40,7 @@ type AttestationResult struct {
 
 type Attestor interface {
 	Attest(ctx context.Context) (*AttestationResult, error)
+	ReAttest(ctx context.Context) (*AttestationResult, error)
 }
 
 type Config struct {
@@ -63,7 +64,15 @@ func New(config *Config) Attestor {
 	return &attestor{c: config}
 }
 
+func (a *attestor) ReAttest(ctx context.Context) (res *AttestationResult, err error) {
+	return a.attest(ctx, true)
+}
+
 func (a *attestor) Attest(ctx context.Context) (res *AttestationResult, err error) {
+	return a.attest(ctx, false)
+}
+
+func (a *attestor) attest(ctx context.Context, ignoreExistingSVID bool) (res *AttestationResult, err error) {
 	counter := telemetry_agent.StartNodeAttestCall(a.c.Metrics)
 	defer counter.Done(&err)
 
@@ -71,7 +80,7 @@ func (a *attestor) Attest(ctx context.Context) (res *AttestationResult, err erro
 	if err != nil {
 		return nil, err
 	}
-	svid, key, err := a.loadSVID(ctx)
+	svid, key, err := a.loadSVID(ctx, ignoreExistingSVID)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +102,7 @@ func (a *attestor) Attest(ctx context.Context) (res *AttestationResult, err erro
 }
 
 // Load the current SVID and key. The returned SVID is nil to indicate a new SVID should be created.
-func (a *attestor) loadSVID(ctx context.Context) ([]*x509.Certificate, *ecdsa.PrivateKey, error) {
+func (a *attestor) loadSVID(ctx context.Context, ignoreExistingSVID bool) ([]*x509.Certificate, *ecdsa.PrivateKey, error) {
 	km := a.c.Catalog.GetKeyManager()
 	fetchRes, err := km.FetchPrivateKey(ctx, &keymanager.FetchPrivateKeyRequest{})
 	if err != nil {
@@ -106,12 +115,14 @@ func (a *attestor) loadSVID(ctx context.Context) ([]*x509.Certificate, *ecdsa.Pr
 	svidIsExpired := isSVIDExpired(svid, time.Now)
 
 	switch {
-	case privateKeyExists && svidExists && !svidIsExpired:
+	case privateKeyExists && svidExists && !svidIsExpired && !ignoreExistingSVID:
 		key, err := x509.ParseECPrivateKey(fetchRes.PrivateKey)
 		if err != nil {
 			return nil, nil, fmt.Errorf("parse key from keymanager: %v", key)
 		}
 		return svid, key, nil
+	case privateKeyExists && svidExists && ignoreExistingSVID:
+		a.c.Log.Warn("Private key and SVID recovered, but they are potentially invalid. Generating new keypair.")
 	case privateKeyExists && svidExists && svidIsExpired:
 		a.c.Log.Warn("Private key recovered, but SVID is expired. Generating new keypair.")
 	case privateKeyExists && !svidExists:

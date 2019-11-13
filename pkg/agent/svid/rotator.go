@@ -24,6 +24,7 @@ type Rotator interface {
 	Subscribe() observer.Stream
 	GetRotationMtx() *sync.RWMutex
 	SetRotationFinishedHook(func())
+	ReAttest(context.Context) error
 }
 
 type rotator struct {
@@ -163,6 +164,19 @@ func (r *rotator) rotateSVID(ctx context.Context) (err error) {
 		r.rotationFinishedHook()
 	}
 
+	return nil
+}
+
+func (r *rotator) ReAttest(ctx context.Context) error {
+	attestRes, err := r.c.Attestor.ReAttest(ctx)
+	if err != nil {
+		return err
+	}
+	s := State{
+		SVID: attestRes.SVID,
+		Key:  attestRes.Key,
+	}
+	r.state.Update(s)
 	return nil
 }
 

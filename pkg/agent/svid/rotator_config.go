@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"github.com/andres-erbsen/clock"
+	attestor "github.com/spiffe/spire/pkg/agent/attestor/node"
 	"github.com/spiffe/spire/pkg/agent/catalog"
 	"github.com/spiffe/spire/pkg/agent/client"
 	"github.com/spiffe/spire/pkg/agent/manager/cache"
 	"github.com/spiffe/spire/pkg/common/telemetry"
 
-	"github.com/imkira/go-observer"
+	observer "github.com/imkira/go-observer"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,8 +27,9 @@ type RotatorConfig struct {
 	TrustDomain url.URL
 	ServerAddr  string
 	// Initial SVID and key
-	SVID    []*x509.Certificate
-	SVIDKey *ecdsa.PrivateKey
+	SVID     []*x509.Certificate
+	SVIDKey  *ecdsa.PrivateKey
+	Attestor attestor.Attestor
 
 	BundleStream *cache.BundleStream
 

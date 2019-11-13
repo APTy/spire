@@ -62,6 +62,7 @@ func New(ctx context.Context, c *Config) (*manager, error) {
 		Catalog:      c.Catalog,
 		Log:          c.Log,
 		Metrics:      c.Metrics,
+		Attestor:     c.Attestor,
 		SVID:         as.SVID,
 		SVIDKey:      as.Key,
 		SpiffeID:     spiffeID,

@@ -5,13 +5,14 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/spiffe/spire/pkg/common/errorutil"
 	"io"
 	"net"
 	"net/url"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/spiffe/spire/pkg/common/errorutil"
 
 	"github.com/andres-erbsen/clock"
 	"github.com/golang/protobuf/ptypes/wrappers"
@@ -35,6 +36,8 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 )
+
+const DenyAgentNotAttested = "agent is not attested or no longer valid"
 
 type HandlerConfig struct {
 	Log         logrus.FieldLogger
@@ -417,7 +420,7 @@ func (h *Handler) FetchJWTSVID(ctx context.Context, req *node.FetchJWTSVIDReques
 
 	agentID, err := getSpiffeIDFromCert(peerCert)
 	log = log.WithFields(logrus.Fields{
-		telemetry.AgentID: agentID,
+		telemetry.AgentID:  agentID,
 		telemetry.SPIFFEID: req.Jsr.SpiffeId,
 	})
 
@@ -487,7 +490,7 @@ func (h *Handler) AuthorizeCall(ctx context.Context, fullMethod string) (context
 
 		if err := h.validateAgentSVID(ctx, peerCert); err != nil {
 			h.c.Log.WithError(err).WithField(telemetry.Method, fullMethod).Error("Agent is not attested or no longer valid")
-			return nil, status.Error(codes.PermissionDenied, "agent is not attested or no longer valid")
+			return nil, status.Error(codes.PermissionDenied, DenyAgentNotAttested)
 		}
 
 		ctx = withPeerCertificate(ctx, peerCert)
@@ -1040,7 +1043,7 @@ func (h *Handler) getBundle(ctx context.Context, trustDomainID string) (*common.
 	})
 	if err != nil {
 		h.c.Log.WithError(err).Error("Failed to fetch bundle")
-		return nil, errorutil.WrapError(err,"failed to fetch bundle")
+		return nil, errorutil.WrapError(err, "failed to fetch bundle")
 	}
 	if resp.Bundle == nil {
 		return nil, errors.New("bundle not found")

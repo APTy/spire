@@ -17,9 +17,11 @@ import (
 	"github.com/spiffe/spire/pkg/common/bundleutil"
 	"github.com/spiffe/spire/pkg/common/telemetry"
 	"github.com/spiffe/spire/pkg/common/util"
+	servernode "github.com/spiffe/spire/pkg/server/endpoints/node"
 	"github.com/spiffe/spire/proto/spire/agent/keymanager"
 	"github.com/spiffe/spire/proto/spire/api/node"
 	"github.com/spiffe/spire/proto/spire/common"
+	"google.golang.org/grpc/status"
 )
 
 // Manager provides cache management functionalities for agents.
@@ -92,7 +94,7 @@ func (m *manager) Initialize(ctx context.Context) error {
 		return fmt.Errorf("fail to store private key: %v", err)
 	}
 
-	return m.synchronize(ctx)
+	return m.syncOrAttest(ctx)
 }
 
 func (m *manager) Run(ctx context.Context) error {
@@ -179,12 +181,29 @@ func (m *manager) runSynchronizer(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		}
-		err := m.synchronize(ctx)
-		if err != nil {
-			// Just log the error and wait for next synchronization
-			m.c.Log.WithError(err).Error("synchronize failed")
-		}
+		_ = m.syncOrAttest(ctx)
 	}
+}
+
+func (m *manager) syncOrAttest(ctx context.Context) error {
+	err := m.synchronize(ctx)
+	if err == nil {
+		return nil
+	}
+	m.c.Log.WithError(err).Error("synchronize failed")
+
+	s, ok := status.FromError(err)
+	if !ok {
+		return err
+	}
+	if s.Message() != servernode.DenyAgentNotAttested {
+		return err
+	}
+	if err := m.svid.ReAttest(ctx); err != nil {
+		m.c.Log.WithError(err).Error("re-attest failed")
+		return err
+	}
+	return nil
 }
 
 func (m *manager) runSVIDObserver(ctx context.Context) error {
