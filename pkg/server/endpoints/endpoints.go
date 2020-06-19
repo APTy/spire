@@ -26,6 +26,7 @@ import (
 	datastore_pb "github.com/spiffe/spire/pkg/server/plugin/datastore"
 	node_pb "github.com/spiffe/spire/proto/spire/api/node"
 	registration_pb "github.com/spiffe/spire/proto/spire/api/registration"
+	"github.com/spiffe/spire/proto/spire/common"
 )
 
 // This is the maximum amount of time an agent connection may exist before
@@ -263,23 +264,37 @@ func (e *Endpoints) getTLSConfig(ctx context.Context) func(*tls.ClientHelloInfo)
 	}
 }
 
-// getCerts queries the datastore and returns a TLS serving certificate(s) plus
-// the current CA root bundle.
-func (e *Endpoints) getCerts(ctx context.Context) ([]tls.Certificate, *x509.CertPool, error) {
+func (e *Endpoints) fetchCachedBundle(ctx context.Context) (*common.Bundle, error) {
+	if bundle := e.c.bundleCache.Get(); bundle != nil {
+		return bundle, nil
+	}
+
 	ds := e.c.Catalog.GetDataStore()
 
 	resp, err := ds.FetchBundle(ctx, &datastore_pb.FetchBundleRequest{
 		TrustDomainId: e.c.TrustDomain.String(),
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("get bundle from datastore: %v", err)
+		return nil, fmt.Errorf("get bundle from datastore: %v", err)
 	}
 	if resp.Bundle == nil {
-		return nil, nil, errors.New("bundle not found")
+		return nil, errors.New("bundle not found")
+	}
+
+	e.c.bundleCache.Set(resp.Bundle)
+	return resp.Bundle, nil
+}
+
+// getCerts queries the datastore and returns a TLS serving certificate(s) plus
+// the current CA root bundle.
+func (e *Endpoints) getCerts(ctx context.Context) ([]tls.Certificate, *x509.CertPool, error) {
+	bundle, err := e.fetchCachedBundle(ctx)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	var caCerts []*x509.Certificate
-	for _, rootCA := range resp.Bundle.RootCas {
+	for _, rootCA := range bundle.RootCas {
 		rootCACerts, err := x509.ParseCertificates(rootCA.DerBytes)
 		if err != nil {
 			return nil, nil, fmt.Errorf("parse bundle: %v", err)

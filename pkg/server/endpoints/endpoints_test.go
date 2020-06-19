@@ -72,6 +72,7 @@ func (s *EndpointsTestSuite) SetupTest() {
 		TrustDomain: td,
 		Catalog:     catalog,
 		Log:         log,
+		bundleCache: newNoopBundleCache(),
 	}
 
 	s.e = New(c)

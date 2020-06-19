@@ -49,10 +49,16 @@ type Config struct {
 
 	Log     logrus.FieldLogger
 	Metrics telemetry.Metrics
+
+	// not intended for public consumption
+	bundleCache *bundleCache
 }
 
 // New creates new endpoints struct
 func New(c *Config) *Endpoints {
+	if c.bundleCache == nil {
+		c.bundleCache = newBundleCache()
+	}
 	return &Endpoints{
 		c: c,
 	}
